@@ -1,0 +1,262 @@
+/**********************************z智能车程序***************************************
+/ * 文件名       ：main.c                                                           /
+/ * 实验平台     ：野火kinetis开发板                                                /
+/ * 库版本       ：                                                                 /
+/ * 嵌入系统     ：                                                                 /
+/ * 作者         ：野火嵌入式开发工作室                                             /
+/ * 淘宝店       ：http://firestm32.taobao.com                                      /
+/ * 技术支持论坛 ：http://www.ourdev.cn/bbs/bbs_list.jsp?bbs_id=1008                /
+************************************************************************************/
+
+#include "common.h"
+#include "include.h"
+/***********************************舵机*****************************************/
+#define steer_left  1000	//左极限
+#define steer_right 1550	//右极限
+#define steer_center 1265       //舵机中点
+#define On_straight  0          //直道
+#define	In_straight  1   
+#define BAG_BEND     2          //大弯 
+#define Middle_point 74
+
+#define Select_line  60         //选定前瞻
+
+
+#define FAZHI_shizhi 15
+#define FAZHI_zhidao 3
+#define zhidao 1
+#define left  2
+#define right  3
+u32 angle;                      //角度
+u8 Cnt_shizhi=0;
+u8 Cnt_tend=10;
+u8 flag_shizhi=0;
+u8 flag_jiwan =0;
+u8 flag_nochange=0;
+u8 flag_loselineL=0;
+u8 flag_loselineR=0;
+
+float errorPRE;
+float errorLAST;
+float errorNOW;
+float errorAVE;
+float Kp=5.0;
+float Kd=0.0;
+u8 fangxiang=0;
+u8 tend=0;
+u8 end_rowC=0;
+u8 end_rowL=45;
+u8 end_rowR=45;
+/***********************************end***************************************/
+
+
+
+/**********************************电机****************************************/
+#define  Speed_FAZHI   30
+float Speed_zhidao ;
+float Speed_wandao;
+float Speed_jizhuanwan;
+float Speed_stop=0; 
+u8    flag_stop=0;
+float KI;
+float KP;
+float KD;
+float Speedmax;
+float Speedmin;
+float Set_speed;
+float Sur_speed;
+float PREerror;
+float LASTerror;
+float NOWerror;
+float Speed_out;
+float V_add;
+
+/***********************************end****************************************/
+
+
+
+/*************************************摄像头******************************************/
+
+u8  nrf_buff[CAMERA_SIZE + MAX_ONCE_TX_NUM];     //预多
+u8 *img_bin_buff = (u8 *)(((u8 *)&nrf_buff) + COM_LEN);  //二值化图像的buf指针，由于开头有 COM_LEN 个字节是留给校验，所以需要加 COM_LEN
+u8 img_buff[120][160];
+u8 i=0,j=0;
+u8 mid[121],row_left[121],row_right[121];
+u8 loseline[121];
+u8 a,b;
+u32 sum=1000;
+/**************************************end********************************************/ 
+  
+
+
+
+void main(void)
+{ 
+    mid[120]=74;
+    row_left[120]=0;
+    row_right[120]=148;
+    errorPRE= 0.0;
+    errorLAST=0.0;
+    errorAVE= 0.0;
+    errorNOW= 0.0;
+    angle=steer_center;
+    uart_init (UART1, 128000);
+    Ov7725_Init(img_bin_buff);          	    //摄像头初始化
+    
+    while(1)
+    {
+     
+     // Cnt_shizhi=0;
+     // Cnt_tend=10;
+     // tend=0;
+      sum=1000;
+      
+        ov7725_get_img();                           //采集
+        img_extract((u8 *)img_buff,(u8 *)img_bin_buff,2400); 
+ /************************图像处理**********************************************/       
+         for(i=119;i>0;i--)                         // 图像处理，提取中心线
+        {
+          for(j=mid[i+1];j>0;j--)
+          {
+            if(img_buff[i][j]==0&&img_buff[i][j-1]==0&&img_buff[i][j+1]==255)
+            {    row_left[i]=j;
+                 break;
+            }
+          }
+          if(j==0) 
+              {
+              row_left[i]=row_left[i+1];
+              flag_loselineL=1;
+              }
+          else
+              flag_loselineL=0;
+                  
+          for(j=mid[i+1];j<159;j++)
+          {
+            if(img_buff[i][j]==0&&img_buff[i][j+1]==0&&img_buff[i][j-1]==255)
+            {
+              row_right[i]=j;
+              break;
+            }
+          }
+          if(j==159) 
+               {
+                 row_right[i]=row_right[i+1];
+                 flag_loselineR=1;
+               }
+          else
+                 flag_loselineR=0;
+                   
+          mid[i]=(row_left[i]+row_right[i])/2;          //中心线
+ 
+                   
+          if(flag_loselineR==1&&flag_loselineL==1)
+              loseline[i]=1;
+          else
+              loseline[i]=0;
+            
+
+        }  
+
+        
+     errorAVE=mid[Select_line]+mid[Select_line-1]+mid[Select_line-2]+mid[Select_line+1]+mid[Select_line+2];     //计算偏差
+     errorAVE/=5;
+     
+     errorPRE= errorLAST;
+     errorLAST=errorNOW;
+     errorNOW =(float)(Middle_point-errorAVE) ;  
+     
+ /************************end**********************************************/  
+     
+/***************************判断路况**************************************/
+          
+     for(i=119;i>0;i--)                        //用74列的结束行判断路况
+           {
+           if(img_buff[i][74]==0)
+               { end_rowC=i;
+                  break;
+               }
+           }
+ /************************end**********************************************/            
+ 
+ /********************串口******************/
+
+        for(i=0;i<120;i++)     //置黑列
+        {
+        img_buff[i][mid[i]]=0;
+        img_buff[i][74]=0;
+        }
+        for(j=0;j<160;j++)     //置黑行
+        {
+        img_buff[60][j]=0;
+        img_buff[end_rowC][j]=0;
+        }
+
+        
+        uart_putchar (UART1, 0);
+        uart_putchar (UART1, 255);
+        uart_putchar (UART1,1);
+        uart_putchar (UART1,0);
+        
+        for(i=0;i<120;i++)
+        {
+          for(j=0;j<160;j++)
+            uart_putchar (UART1, img_buff[i][j]);
+        }   
+ 
+     for(i=40;i<=100;i++)
+          sum+=(mid[i]-mid[i+1]);
+
+ /**************************************************/
+  
+ /*****************判定趋势*********************************
+    for(i=Select_line;i<=Select_line-5;i--)
+       {
+	if(mid[i]>mid[i-1])
+		Cnt_tend++;
+	if(mid[i]<mid[i-1])
+		Cnt_tend--;
+       }
+   if(Cnt_tend>=13)
+	tend=left;
+   if(Cnt_tend<=7)
+  	tend=right; 
+   if((tend=left&&errorNOW<0)||(tend=right&&errorNOW>0))  //打角不变
+	flag_nochange=1;
+   else
+        flag_nochange=0;
+*********************end***********************************/    
+ 
+ /************************十字弯*************************    
+       for(i=40;i<=80;i++)               //判定十字弯
+          if(loseline[i]==1)
+              Cnt_shizhi++;
+      if(Cnt_shizhi>=FAZHI_shizhi)                   
+          flag_shizhi=1;
+      else
+          flag_shizhi=0;
+
+               if(flag_shizhi)
+                  angle=steer_center;
+               else
+     
+     
+*********************end**********************************/
+                    if( (Middle_point-errorAVE)>FAZHI_zhidao||(errorAVE-Middle_point>FAZHI_zhidao) )       //舵机控制
+                          angle= (u32 )( angle  +Kp*(errorNOW-errorLAST)+Kd*(errorNOW-2*errorLAST+ errorPRE) );
+                    else
+                          angle=angle;
+   
+        
+  
+                    
+                    
+    if(angle>1550)  angle=1550;            //舵机限幅
+    if(angle<1000)  angle=1000;
+    FTM_PWM_init(FTM1,CH0,100,angle);
+    
+ // gpio_init(PORTD,5,GPO,0);             //配置电机
+ // FTM_PWM_init(FTM0,CH4,10000,3000); 
+
+  }
+}

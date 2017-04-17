@@ -1,0 +1,80 @@
+[DebugChecksum]
+Checksum=-1432465070
+[Stack]
+FillEnabled=0
+OverflowWarningsEnabled=1
+WarningThreshold=90
+SpWarningsEnabled=1
+WarnLogOnly=1
+UseTrigger=1
+TriggerName=main
+LimitSize=0
+ByteLimit=50
+[Exceptions]
+StopOnUncaught=_ 0
+StopOnThrow=_ 0
+[CallStack]
+ShowArgs=0
+[Disassembly]
+MixedMode=0
+[JLinkDriver]
+TraceBufferSize=0x00010000
+TraceStallIfFIFOFull=0x00000000
+TracePortSize=0x00000004
+[Trace1]
+Enabled=0
+ShowSource=1
+[CallStackLog]
+Enabled=0
+[DriverProfiling]
+Enabled=0
+Mode=1
+Graph=0
+Symbiont=0
+Exclusions=
+[Breakpoints2]
+Count=0
+[watch_formats]
+Fmt0={W}0:Cnt_nihe	3	0
+Fmt1={W}0:Cnt_shizhi	3	0
+Fmt2={W}0:Con_road	3	0
+Fmt3={W}0:a	3	0
+Fmt4={W}0:cnt_stop	3	0
+Fmt5={W}0:end_rowC	3	0
+Fmt6={W}0:end_rowL	3	0
+Fmt7={W}0:end_rowR	3	0
+Fmt8={W}0:flag_nochange	3	0
+Fmt9={W}0:flag_shizhi	3	0
+Fmt10={W}0:mid[i]	3	0
+Fmt11={W}0:nihe_fenjie	3	0
+Fmt12={W}0:nihe_i	3	0
+Fmt13={W}0:row_left[i]	3	0
+Fmt14={W}0:row_right[i]	3	0
+Fmt15={W}0:tiaodian_y	3	0
+[Log file]
+LoggingEnabled=_ 0
+LogFile=_ ""
+Category=_ 0
+[TermIOLog]
+LoggingEnabled=_ 0
+LogFile=_ ""
+[Disassemble mode]
+mode=0
+[Breakpoints]
+Bp0=_ "STD_CODE" "{C:\Users\Administrator\Desktop\摄像头（50帧稳定版本修改）\src\drivers\camera\OV7725.c}.40.13" 0 0 0 0 "" 0 "" 0
+Bp1=_ "STD_CODE" "{C:\Users\Administrator\Desktop\端午节智能车程序测试\07舵机PD参数调节程序(基础)\src\projects\fire_camera_demo\main.c}.245.21" 0 0 0 0 "" 0 "" 0
+Bp2=_ "STD_CODE" "{C:\Users\Administrator\Desktop\端午节智能车程序测试\13舵机PD参数调节程序\src\projects\fire_camera_demo\main.c}.367.7" 0 0 0 0 "" 0 "" 0
+Bp3=_ "STD_CODE" "{C:\Users\Administrator\Desktop\端午节智能车程序测试\14舵机PD参数调节程序(6月14号)\src\projects\fire_camera_demo\main.c}.378.4" 0 0 0 0 "" 0 "" 0
+Bp4=_ "STD_CODE" "{C:\Users\Administrator\Desktop\端午节智能车程序测试\14舵机PD参数调节程序(6月14号)( 有效)\src\projects\fire_camera_demo\main.c}.420.8" 0 0 0 0 "" 0 "" 0
+Bp5=_ "STD_CODE" "{C:\Users\Administrator\Desktop\端午节智能车程序测试\16舵机PD参数调节程序(6月15号)\src\projects\fire_camera_demo\main.c}.448.7" 0 0 0 0 "" 0 "" 0
+Count=6
+[Aliases]
+A0=_ "C:\Users\Administrator\Desktop\（完结）最稳定17舵机PD参数调节程序(6月15号)(加速度控制+开关\src\drivers\camera\OV7725.c" ""
+A1=_ "C:\Users\Administrator\Desktop\（完结）最稳定17舵机PD参数调节程序(6月15号)(加速度控制+开关\src\drivers\uart\uart.c" ""
+A2=_ "C:\Users\Administrator\Desktop\端午节智能车程序测试\13舵机PD参数调节程序\src\drivers\camera\OV7725.c" ""
+A3=_ "C:\Users\Administrator\Desktop\端午节智能车程序测试\13舵机PD参数调节程序\src\drivers\uart\uart.c" ""
+A4=_ "C:\Users\Administrator\Desktop\端午节智能车程序测试\最稳定17舵机PD参数调节程序(6月15号)(加速度控制) - 副本\src\drivers\camera\OV7725.c" ""
+A5=_ "C:\Users\Administrator\Desktop\端午节智能车程序测试\最稳定17舵机PD参数调节程序(6月15号)(加速度控制) - 副本\src\drivers\uart\uart.c" ""
+A6=_ "C:\Users\Administrator\Desktop\最稳定17舵机PD参数调节程序(6月15号)(加速度控制+开关\src\projects\fire_camera_demo\main.c" ""
+Count=7
+SuppressDialog=0

@@ -1,0 +1,9 @@
+ 1.  //if(end_rowC>=116&&end_rowL>=116)
+     // break;
+ 2.  //if(end_rowC>=116&&end_rowL>=116&&end_rowC<=50)
+     // break;
+ 3.  for(i=129;i>30;i++)
+	if(img_buff[115][i]==0)
+	    cnt_stop++;
+      if((end_rowL>=116&&end_rowC>=116&&end_rowR<=60)||cnt_stop>=45)   //判定起跑线或紧急停车
+      break;

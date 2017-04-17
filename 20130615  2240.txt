@@ -1,0 +1,310 @@
+/*********************舵机+电机程序********************
+ * 文件名       ：main.c
+ * 实验平台     ：
+ * 作者         ：
+ * 淘宝店       ：http://firestm32.taobao.com
+ * 技术支持论坛 ：http://www.ourdev.cn/bbs/bbs_list.jsp?bbs_id=1008
+**********************************************************************************/
+
+#include "common.h"
+#include "include.h"
+/***********************************舵机*****************************************/
+#define steer_left  1000	//左极限
+#define steer_right 1550	//右极限
+#define steer_center 1265       //舵机中点
+#define On_straight  0          //直道
+#define	In_straight  1   
+#define BAG_BEND     2          //大弯 
+#define Middle_point 74
+#define Select_line  51
+#define FAZHI_shizhi 15
+#define zhidao 1
+#define left  2
+#define right  3
+u32 angle;                      //角度
+u8 Cnt_shizhi=0;
+u8 flag_shizhi=0;
+u8 flag_jiwan =0;
+u8 flag_loselineL=0;
+u8 flag_loselineR=0;
+u8 loseline[121];
+
+float errorPRE;
+float errorLAST;
+float errorNOW;
+float errorAVE;
+float Kp=4.0;
+float Kd= 5.5;
+u8 fangxiang=0;
+u8 tend=0;
+u8 end_rowC=0;
+u8 end_rowL=45;
+u8 end_rowR=45;
+/**********************************电机****************************************/
+#define  Speed_FAZHI   30
+float Speed_zhidao ;
+float Speed_wandao;
+float Speed_jizhuanwan;
+float Speed_stop=0; 
+u8    flag_stop=0;
+float KI;
+float KP;
+float KD;
+float Speedmax;
+float Speedmin;
+float Set_speed;
+float Sur_speed;
+float PREerror;
+float LASTerror;
+float NOWerror;
+float Speed_out;
+float V_add;
+/**************************************************************************/
+
+u8  nrf_buff[CAMERA_SIZE + MAX_ONCE_TX_NUM];     //预多
+u8 *img_bin_buff = (u8 *)(((u8 *)&nrf_buff) + COM_LEN);  //二值化图像的buf指针，由于开头有 COM_LEN 个字节是留给校验，所以需要加 COM_LEN
+u8 img_buff[120][160];
+u8 i=0,j=0;
+u8 mid[121],row_left[121],row_right[121];
+u8 a,b;
+/****************************************************************************/ 
+void main(void)
+{ 
+    mid[120]=80;
+    row_left[120]=0;
+    row_right[120]=159;
+    errorPRE=0.0;
+    errorLAST=0.0;
+    errorAVE=0.0;
+    errorNOW=0.0;
+    angle=steer_center;
+    /****************************************     
+    拨码开关：得到Speedmax和Speedmin
+    *****************************************/ 
+    Speed_zhidao=Speedmax;
+    Speed_wandao=Speedmax-10.0;
+    Speed_jizhuanwan=Speedmin;
+    Speed_out=Speed_zhidao;
+    PREerror=0.0;  
+    LASTerror=0.0;
+    NOWerror=0.0;
+    V_add=0.0;
+   
+    //控制电机转动
+    /****************************************     
+    定时二到三秒
+    *****************************************/
+   
+      
+    uart_init (UART1, 128000);
+    Ov7725_Init(img_bin_buff);          	    //摄像头初始化
+    
+
+    
+    while(1)
+    {
+     Cnt_shizhi=0; 
+     tend=0;
+     end_rowC=0;
+     end_rowL=45;
+     end_rowR=45;  
+      
+      
+        ov7725_get_img();                           //采集
+        img_extract((u8 *)img_buff,(u8 *)img_bin_buff,2400); 
+        
+         for(i=119;i>0;i--)                         // 图像处理
+        {
+          for(j=mid[i+1];j>0;j--)
+          {
+            if(img_buff[i][j]==0&&img_buff[i][j-1]==0&&img_buff[i][j+1]==255)
+            {    row_left[i]=j;
+                 break;
+            }
+          }
+          if(j==0) 
+              {
+              row_left[i]=row_left[i+1];
+              flag_loselineL=1;
+              }
+          else
+              flag_loselineL=0;
+                  
+          for(j=mid[i+1];j<159;j++)
+          {
+            if(img_buff[i][j]==0&&img_buff[i][j+1]==0&&img_buff[i][j-1]==255)
+            {
+              row_right[i]=j;
+              break;
+            }
+          }
+          if(j==159) 
+               {
+                 row_right[i]=row_right[i+1];
+                 flag_loselineR=1;
+               }
+          else
+                 flag_loselineR=0;
+                   
+          mid[i]=(row_left[i]+row_right[i])/2;  //提取中心线
+          //img_buff[i][mid[i]]=0;                //中心线置0
+          
+          if(flag_loselineR==1&&flag_loselineL==1)
+              loseline[i]=1;
+          else
+              loseline[i]=0;
+            
+
+        }
+     errorAVE=mid[Select_line]*2+mid[Select_line-2]+mid[Select_line-4]+mid[Select_line+4]+mid[Select_line+8]; //计算转角偏差
+     errorAVE/=6;
+     
+     errorPRE= errorLAST;
+     errorLAST=errorNOW;
+     errorNOW =Middle_point- errorAVE; 
+
+  /**********************************************
+   测速：得到Sur_speed
+     
+     
+     
+  *******************************************/
+     
+     
+     
+     for(i=119;i>0;i--)                        //用第47列，74列和100列来判断路况
+           if(img_buff[i][74]==0)
+               { end_rowC=i;
+                  break;
+                }
+     for(i=45;i>=119;i++)
+          {
+            if(img_buff[i][47]==0)
+               end_rowL=i;
+            if(img_buff[i][100]==0)
+               end_rowR=i;
+
+          }
+      for(i=31;i<=71;i++)                   //判定十字弯
+          if(loseline[i]==1)
+              Cnt_shizhi++;
+      if(Cnt_shizhi>=FAZHI_shizhi)                   
+          flag_shizhi=1;
+      else
+          flag_shizhi=0;
+
+     
+     if(end_rowC>=95||((end_rowL>=90&&end_rowL<=119)&&(end_rowR>=90&&end_rowR<=119)))   //判定起跑线和紧急停车
+       flag_stop=1;
+     else
+       flag_stop=0;
+     
+     if((end_rowL>=50&&end_rowL<90)&&(end_rowR>=50&&end_rowR<90)&&(end_rowC>=50&&end_rowC<90))      //判断急转弯
+        flag_jiwan=1;
+     else
+        flag_jiwan=0;
+       
+     
+     if(end_rowC<=30)                                 //根据路况调PD及调速度
+           {Kp=4.0;    Kd=4.0;    Set_speed=Speed_zhidao;}
+     else
+          if(end_rowC>=30&&end_rowC<40)
+                {Kp=6.5;    Kd= 5.0;    Set_speed=Speed_wandao;}
+          else
+              if(end_rowC>=40&&end_rowC<50)
+                     {Kp=7.0;    Kd= 5.0;   Set_speed=Speed_wandao;}
+              else
+                   if(end_rowC>=50&&end_rowC<55)
+                        {Kp=8.0;    Kd= 5.0;  Set_speed=Speed_wandao;}
+                   else
+                        if(end_rowC>=55&&end_rowC<60)
+                            {Kp=8.5;    Kd= 5.0;    Set_speed=Speed_jizhuanwan; }   
+                        else
+                            if(end_rowC>=60&&end_rowC<70)
+                               {Kp=8.5;    Kd= 5.0;   Set_speed=Speed_jizhuanwan;}
+                            else
+                                {Kp=10.0;  Kd= 4.0;   Set_speed=Speed_jizhuanwan;}
+       
+     if(flag_jiwan==1)
+       {
+       if(end_rowL-end_rowR>=5)
+          tend=left;
+       else
+          if(end_rowR-end_rowL>=5)
+              tend=right;
+          else
+              tend=0;
+       Set_speed=Speed_jizhuanwan;
+       }
+        
+    
+     
+        if(flag_shizhi==1)                    //控制舵机
+            angle=steer_center;
+        else
+            if(tend==left)
+               angle=steer_right;
+            else
+                if(tend==right)
+                   angle=steer_left;
+                else  
+                    if(Middle_point - errorAVE>3||errorAVE-Middle_point>3)
+                        angle= (u32 )(angle+(Kp+Kd)*(errorNOW)-(Kp+2*Kd)*(errorLAST)+ Kd*(errorPRE));
+                else
+                    angle=steer_center;
+   
+  
+                
+
+    
+    PREerror=LASTerror;                    //计算速度偏差
+    LASTerror=NOWerror;
+    NOWerror=Set_speed-Sur_speed;                                              
+                                
+                
+   if(flag_stop==1)                          //控制电机
+       {
+       Speed_out= Speed_stop;
+       break;
+       }
+   else
+       if(Set_speed-Sur_speed>=Speed_FAZHI)
+	    Speed_out=Speedmax;
+       else
+           if(Sur_speed-Set_speed>=Speed_FAZHI)
+	        Speed_out=Speedmin;
+           else
+	      {
+	       V_add=KI*(NOWerror-LASTerror)+KP*NOWerror+KD*(NOWerror+PREerror-2*LASTerror);
+
+               Speed_out=Speed_out+V_add;
+	      }
+           
+           
+        
+    if(angle>1550)  angle=1550;            //舵机限幅
+    if(angle<1000)  angle=1000;
+    FTM_PWM_init(FTM1,CH0,100,angle);
+    
+    
+     
+    if(Speed_out>Speedmax)                //电机限幅
+	Speed_out=Speedmax;
+    if(Speed_out<Speedmax)
+	Speed_out=Speedmax;
+    
+    //加入底层配置。   
+    
+    
+    
+        
+   
+  }
+  
+  
+while(1)
+   {
+   
+   }
+
+}
